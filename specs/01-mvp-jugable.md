@@ -1,6 +1,6 @@
 # SPEC 01 — MVP jugable de Arkanoid
 
-> **Estado:** Aprobado
+> **Estado:** Im´plementado
 > **Depende de:** —
 > **Fecha:** 2026-07-04
 > **Objetivo:** Un Arkanoid jugable en una sola pantalla de 800×600 con paddle (mouse + teclado), pelota de física predecible, grilla de 10×6 bloques que suman 10 puntos al romperse, 3 vidas y overlay de victoria/derrota reiniciable.
