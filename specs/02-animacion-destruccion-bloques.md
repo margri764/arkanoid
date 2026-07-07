@@ -1,6 +1,6 @@
 # SPEC 02 — Animación de destrucción de bloques
 
-> **Estado:** Draft
+> **Estado:** Implementado
 > **Depende de:** SPEC 01 — MVP jugable de Arkanoid
 > **Fecha:** 2026-07-07
 > **Objetivo:** Al romperse un bloque, reproducir en su lugar una animación de explosión de 4 frames por color (150ms, sprites del spritesheet) como capa puramente visual, sin tocar la lógica de colisión, puntaje ni victoria.

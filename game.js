@@ -19,6 +19,9 @@ const GRID_LEFT = (WIDTH - (COLS * BRICK_W + (COLS - 1) * BRICK_PAD)) / 2;
 // Máximo ángulo de rebote en el paddle respecto de la vertical (60°)
 const MAX_BOUNCE = (60 * Math.PI) / 180;
 
+// Escala de la explosión sobre el rect del bloque (30% más grande)
+const EXPLOSION_SCALE = 1.3;
+
 // Estado global de la partida
 const state = {
   phase: "ready",        // "ready" | "playing" | "won" | "gameover"
@@ -85,6 +88,7 @@ function resetGame() {
   state.lives = 3;
   state.paddle.x = (WIDTH - state.paddle.w) / 2;
   state.bricks = initBricks();
+  state.explosions = [];
   resetBall();
   hideOverlay();
 }
@@ -140,8 +144,9 @@ function clampPaddle(x) {
 // Update
 // ---------------------------------------------------------------------------
 
-function update() {
+function update(now) {
   updatePaddle();
+  updateExplosions(now);
 
   if (state.phase === "ready") {
     // La pelota sigue al paddle mientras está pegada
@@ -151,7 +156,7 @@ function update() {
 
   if (state.phase !== "playing") return;
 
-  updateBall();
+  updateBall(now);
 }
 
 function updatePaddle() {
@@ -160,7 +165,14 @@ function updatePaddle() {
   if (keys.right) p.x = clampPaddle(p.x + p.speed);
 }
 
-function updateBall() {
+// Purga las explosiones que ya cumplieron su duración (independiente de la fase)
+function updateExplosions(now) {
+  state.explosions = state.explosions.filter(
+    (e) => now - e.start < EXPLOSION_DURATION
+  );
+}
+
+function updateBall(now) {
   const b = state.ball;
   b.x += b.vx;
   b.y += b.vy;
@@ -181,7 +193,7 @@ function updateBall() {
   }
 
   collidePaddle();
-  collideBricks();
+  collideBricks(now);
 
   // Caída por abajo: pierde una vida
   if (b.y - b.r > HEIGHT) {
@@ -211,7 +223,7 @@ function collidePaddle() {
 }
 
 // Colisión con bloques: una sola por frame (el primero detectado)
-function collideBricks() {
+function collideBricks(now) {
   const b = state.ball;
   for (const brick of state.bricks) {
     if (!brick.alive) continue;
@@ -223,6 +235,16 @@ function collideBricks() {
     ) {
       brick.alive = false;
       state.score += 10;
+
+      // Encolar la explosión visual en el lugar del bloque roto
+      state.explosions.push({
+        x: brick.x,
+        y: brick.y,
+        w: brick.w,
+        h: brick.h,
+        color: brick.color,
+        start: now,
+      });
 
       // Invertir el eje según la menor penetración (por dónde entró)
       const overlapX = Math.min(
@@ -287,6 +309,28 @@ function drawBall() {
   drawSprite(ctx, "ball", b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
 }
 
+// Dibuja las explosiones activas: 4 frames por color, centradas y 1.3× más grandes
+function drawExplosions(now) {
+  for (const e of state.explosions) {
+    const frames = EXPLOSION_FRAMES[e.color];
+    if (!frames) continue; // color sin animación: saltear defensivamente
+    const i = Math.floor((now - e.start) / (EXPLOSION_DURATION / 4));
+    if (i < 0 || i > 3) continue;
+    const frame = frames[i];
+    const S = EXPLOSION_SCALE;
+    const cx = e.x + e.w / 2;
+    const cy = e.y + e.h / 2;
+    drawFrame(
+      ctx,
+      frame,
+      cx - (e.w * S) / 2,
+      cy - (e.h * S) / 2,
+      e.w * S,
+      e.h * S
+    );
+  }
+}
+
 // HUD: puntaje y vidas sobre el canvas
 function drawHUD() {
   ctx.fillStyle = "#fff";
@@ -298,11 +342,12 @@ function drawHUD() {
   ctx.fillText("Vidas: " + state.lives, WIDTH - 12, 12);
 }
 
-function render() {
+function render(now) {
   drawBackground();
   drawBricks();
   drawPaddle();
   drawBall();
+  drawExplosions(now);
   drawHUD();
 }
 
@@ -329,9 +374,9 @@ function hideOverlay() {
 // Loop principal
 // ---------------------------------------------------------------------------
 
-function loop() {
-  update();
-  render();
+function loop(now) {
+  update(now);
+  render(now);
   requestAnimationFrame(loop);
 }
 
